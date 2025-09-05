@@ -20,7 +20,7 @@ Recognizing these challenges, our framework provides a straightforward solution 
 Creating raw endpoints, without any Kubernetes behaviour dependency.
 
 ```golang
-Server: *kaf.NewServer(kaf.ServerConfig{
+server := *kaf.NewServer(kaf.ServerConfig{
     Port:     port,
     CertFile: certFile,
     KeyFile:  keyFile,
@@ -43,6 +43,8 @@ Server: *kaf.NewServer(kaf.ServerConfig{
         },
     },
 }),
+
+_ := server.Start(context.Background())
 ```
 
 Call API via `kubectl`.
