@@ -369,22 +369,21 @@ func (s *Server) handleResourceFunc(
 
 		rv := r.URL.Query().Get("resourceVersion")
 
-		var rvm = metav1.ResourceVersionMatchNotOlderThan
-		switch r.URL.Query().Get("resourceVersionMatch") {
-		case string(metav1.ResourceVersionMatchExact):
-			rvm = metav1.ResourceVersionMatchExact
-		case string(metav1.ResourceVersionMatchNotOlderThan):
-			rvm = metav1.ResourceVersionMatchNotOlderThan
+		var rvm metav1.ResourceVersionMatch
+		if rv != "" {
+			switch r.URL.Query().Get("resourceVersionMatch") {
+			case string(metav1.ResourceVersionMatchExact):
+				rvm = metav1.ResourceVersionMatchExact
+			case string(metav1.ResourceVersionMatchNotOlderThan):
+				fallthrough
+			default:
+				rvm = metav1.ResourceVersionMatchNotOlderThan
+			}
 		}
 
 		sendInitial := rv == "" || rv == "0"
 		if sip := r.URL.Query().Get("sendInitialEvents"); sip != "" {
 			sendInitial = strings.EqualFold(sip, "true")
-		}
-
-		if sendInitial && rvm != metav1.ResourceVersionMatchNotOlderThan {
-			http.Error(w, "sendInitialEvents requires resourceVersionMatch=NotOlderThan", http.StatusBadRequest)
-			return
 		}
 
 		timeoutSec := int64(60)
@@ -517,6 +516,19 @@ func (s *Server) handleResourceFunc(
 			Raw:       &metav1.ListOptions{},
 		}
 
+		if rv := r.URL.Query().Get("resourceVersion"); rv != "" {
+			listOpts.Raw.ResourceVersion = rv
+
+			switch r.URL.Query().Get("resourceVersionMatch") {
+			case string(metav1.ResourceVersionMatchExact):
+				listOpts.Raw.ResourceVersionMatch = metav1.ResourceVersionMatchExact
+			case string(metav1.ResourceVersionMatchNotOlderThan):
+				fallthrough
+			default:
+				listOpts.Raw.ResourceVersionMatch = metav1.ResourceVersionMatchNotOlderThan
+			}
+		}
+
 		if ls := r.URL.Query().Get("labelSelector"); ls != "" {
 			selector, err := labels.Parse(ls)
 			if err != nil {
@@ -533,18 +545,6 @@ func (s *Server) handleResourceFunc(
 				return
 			}
 			listOpts.FieldSelector = selector
-		}
-
-		if rv := r.URL.Query().Get("resourceVersion"); rv != "" {
-			listOpts.Raw.ResourceVersion = rv
-		}
-
-		listOpts.Raw.ResourceVersionMatch = metav1.ResourceVersionMatchNotOlderThan
-		switch r.URL.Query().Get("resourceVersionMatch") {
-		case string(metav1.ResourceVersionMatchExact):
-			listOpts.Raw.ResourceVersionMatch = metav1.ResourceVersionMatchExact
-		case string(metav1.ResourceVersionMatchNotOlderThan):
-			listOpts.Raw.ResourceVersionMatch = metav1.ResourceVersionMatchNotOlderThan
 		}
 
 		if err := s.KubeClient.List(r.Context(), items, &listOpts); err != nil {
