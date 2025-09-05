@@ -36,6 +36,9 @@ Server: *kaf.NewServer(kaf.ServerConfig{
                 "": func(w http.ResponseWriter, r *http.Request) {
                     ...
                 },
+                "/bar": func(w http.ResponseWriter, r *http.Request) {
+                    ...
+                },
             },
         },
     },
@@ -46,6 +49,7 @@ Call API via `kubectl`.
 
 ```bash
 kubectl get --raw /apis/example.com/v1/foo
+kubectl get --raw /apis/example.com/v1/foo/bar
 ```
 
 ---
@@ -53,90 +57,65 @@ kubectl get --raw /apis/example.com/v1/foo
 Create fully customized API endpoints for cluster scoped `clustertasks` and namespace scoped `customtasks`.
 
 ```golang
-kubeClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{
-  Scheme: scheme,
-})
-if err != nil {
-  setupLog.Error(err, "unable to create kube client")
-  os.Exit(1)
-}
-
-dynamicKubeClient, err := dynamic.NewForConfig(ctrl.GetConfigOrDie())
-if err != nil {
-  setupLog.Error(err, "unable to create dynamic kube client")
-  os.Exit(1)
-}
-
-Server: *kaf.NewServer(kaf.ServerConfig{
-    KubeClient: kubeClient,
-    DynamicKubeClient: dynamicKubeClient,
-    Port:     port,
-    CertFile: certFile,
-    KeyFile:  keyFile,
-    Group:    "example.com",
-    Version:  "v1",
-    APIKinds: []kaf.APIKind{
+kaf.APIKind {
+    ApiResource: metav1.APIResource{
+        Name:  "clustertasks",
+        Kind:  "ClusterPod",
+        Verbs: []string{"get", "list", "watch", "create", "update", "delete"},
+    },
+    CustomResources: []kaf.CustomResource{
         {
-            ApiResource: metav1.APIResource{
-                Name:  "clustertasks",
-                Kind:  "ClusterPod",
-                Verbs: []string{"get", "list", "watch", "create", "update", "delete"},
+            CreateHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json; charset=utf-8")
             },
-            CustomResources: []kaf.CustomResource{
-                {
-                    CreateHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                        w.Header().Set("Content-Type", "application/json; charset=utf-8")
-                    },
-                    GetHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                        w.Header().Set("Content-Type", "application/json; charset=utf-8")
-                    },
-                    ListHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                        w.Header().Set("Content-Type", "application/json; charset=utf-8")
-                    },
-                    ReplaceHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                        w.Header().Set("Content-Type", "application/json; charset=utf-8")
-                    },
-                    DeleteHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                        w.Header().Set("Content-Type", "application/json; charset=utf-8")
-                    },
-                    WatchHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                        w.Header().Set("Content-Type", "application/json; charset=utf-8")
-                    },
-                },
+            GetHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json; charset=utf-8")
             },
-        },
-        {
-            ApiResource: metav1.APIResource{
-                Name:       "customtasks",
-                Namespaced: true,
-                Kind:       "CustomPod",
-                Verbs:      []string{"get", "list", "watch", "create", "update", "delete"},
+            ListHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json; charset=utf-8")
             },
-            CustomResources: []kaf.CustomResource{
-                {
-                    CreateHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                        w.Header().Set("Content-Type", "application/json; charset=utf-8")
-                    },
-                    GetHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                        w.Header().Set("Content-Type", "application/json; charset=utf-8")
-                    },
-                    ListHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                        w.Header().Set("Content-Type", "application/json; charset=utf-8")
-                    },
-                    ReplaceHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                        w.Header().Set("Content-Type", "application/json; charset=utf-8")
-                    },
-                    DeleteHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                        w.Header().Set("Content-Type", "application/json; charset=utf-8")
-                    },
-                    WatchHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                        w.Header().Set("Content-Type", "application/json; charset=utf-8")
-                    },
-                },
+            ReplaceHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json; charset=utf-8")
+            },
+            DeleteHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json; charset=utf-8")
+            },
+            WatchHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json; charset=utf-8")
             },
         },
     },
-}),
+},
+kaf.APIKind {
+    ApiResource: metav1.APIResource{
+        Name:       "customtasks",
+        Namespaced: true,
+        Kind:       "CustomPod",
+        Verbs:      []string{"get", "list", "watch", "create", "update", "delete"},
+    },
+    CustomResources: []kaf.CustomResource{
+        {
+            CreateHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json; charset=utf-8")
+            },
+            GetHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json; charset=utf-8")
+            },
+            ListHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json; charset=utf-8")
+            },
+            ReplaceHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json; charset=utf-8")
+            },
+            DeleteHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json; charset=utf-8")
+            },
+            WatchHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json; charset=utf-8")
+            },
+        },
+    },
+},
 ```
 
 Call API via `kubectl`.
@@ -182,7 +161,20 @@ type CombinedPodList struct {
 ```
 
 ```golang
-{
+kubeClient, _ := client.New(ctrl.GetConfigOrDie(), client.Options{
+  Scheme: scheme,
+})
+
+dynamicKubeClient, _ := dynamic.NewForConfig(ctrl.GetConfigOrDie())
+
+Server: *kaf.NewServer(kaf.ServerConfig{
+    KubeClient: kubeClient,
+    DynamicKubeClient: dynamicKubeClient,
+    ...
+```
+
+```golang
+kaf.APIKind {
   ApiResource: metav1.APIResource{
     Name:       "combinedpods",
     Namespaced: true,
