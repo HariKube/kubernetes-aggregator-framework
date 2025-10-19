@@ -1,5 +1,3 @@
-> The project is moved to: [https://github.com/HariKube/kubernetes-aggregator-framework](https://github.com/HariKube/kubernetes-aggregator-framework)
-
 # kubernetes-aggregator-framework
 Helper framework to make Kubernetes Aggregation API development easier
 
