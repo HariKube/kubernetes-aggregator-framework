@@ -17,7 +17,7 @@ Recognizing these challenges, our framework provides a straightforward solution 
 
 ## How to Use It
 
-Creating raw endpoints, without any Kubernetes behaviour dependency.
+### Creating raw endpoints, without any Kubernetes behaviour dependency.
 
 ```golang
 server := *kaf.NewServer(kaf.ServerConfig{
@@ -56,7 +56,7 @@ kubectl get --raw /apis/example.com/v1/foo/bar
 
 ---
 
-Create fully customized API endpoints for cluster scoped `clustertasks` and namespace scoped `customtasks`.
+### Create fully customized API endpoints for cluster scoped `clustertasks` and namespace scoped `customtasks`.
 
 ```golang
 kaf.APIKind {
@@ -144,7 +144,7 @@ kubectl delete customtasks foo
 
 ---
 
-Create and API extending Kubernetes API capabilities, for example collecting events of `Pod`s.
+### Create and API extending Kubernetes API capabilities, for example collecting events of `Pod`s.
 
 ```golang
 type CombinedPod struct {
