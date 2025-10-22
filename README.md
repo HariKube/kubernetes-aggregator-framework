@@ -56,7 +56,7 @@ kubectl get --raw /apis/example.com/v1/foo/bar
 
 ---
 
-### Create fully customized API endpoints for cluster scoped `clustertasks` and namespace scoped `customtasks`.
+### Create fully customized API endpoints for cluster and namespace scoped `custom resource`.
 
 ```golang
 kaf.APIKind {
