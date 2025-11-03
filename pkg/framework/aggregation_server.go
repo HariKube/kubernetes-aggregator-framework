@@ -40,10 +40,10 @@ type ServerConfig struct {
 }
 
 type APIKind struct {
-	ApiResource     metav1.APIResource
-	RawEndpoints    map[string]http.HandlerFunc
-	Resources       []Resource
-	CustomResources []CustomResource
+	ApiResource    metav1.APIResource
+	RawEndpoints   map[string]http.HandlerFunc
+	Resource       Resource
+	CustomResource CustomResource
 }
 type Resource struct {
 	CreateNew     ResourceCreateNew
@@ -138,132 +138,124 @@ func NewServer(config ServerConfig) *Server {
 			srv.mux.HandleFunc("/apis/"+config.Group+"/"+config.Version+"/"+ak.ApiResource.Name+ep, fn)
 		}
 
-		for ii := range ak.Resources {
-			res := ak.Resources[ii]
+		srv.mux.HandleFunc("/apis/"+config.Group+"/"+config.Version+"/"+ak.ApiResource.Name, func(w http.ResponseWriter, r *http.Request) {
+			srv.handleResourceFunc(
+				ak.Resource.CreateNew,
+				ak.Resource.CreateNewList,
+				ak.Resource.ListCallback,
+				ak.Resource.WatchCallback,
+				"",
+				"",
+				w,
+				r,
+			)
+		})
 
-			srv.mux.HandleFunc("/apis/"+config.Group+"/"+config.Version+"/"+ak.ApiResource.Name, func(w http.ResponseWriter, r *http.Request) {
+		if !ak.ApiResource.Namespaced {
+			srv.mux.HandleFunc("/apis/"+config.Group+"/"+config.Version+"/"+ak.ApiResource.Name+"/", func(w http.ResponseWriter, r *http.Request) {
+				parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/apis/"+config.Group+"/"+config.Version+"/"+ak.ApiResource.Name+"/"), "/")
+				if parts[0] == "" {
+					http.NotFound(w, r)
+					return
+				}
+
 				srv.handleResourceFunc(
-					res.CreateNew,
-					res.CreateNewList,
-					res.ListCallback,
-					res.WatchCallback,
+					ak.Resource.CreateNew,
+					ak.Resource.CreateNewList,
+					ak.Resource.ListCallback,
+					ak.Resource.WatchCallback,
 					"",
-					"",
+					parts[0],
 					w,
 					r,
 				)
 			})
-
-			if !ak.ApiResource.Namespaced {
-				srv.mux.HandleFunc("/apis/"+config.Group+"/"+config.Version+"/"+ak.ApiResource.Name+"/", func(w http.ResponseWriter, r *http.Request) {
-					parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/apis/"+config.Group+"/"+config.Version+"/"+ak.ApiResource.Name+"/"), "/")
-					if parts[0] == "" {
-						http.NotFound(w, r)
-						return
-					}
-
-					srv.handleResourceFunc(
-						res.CreateNew,
-						res.CreateNewList,
-						res.ListCallback,
-						res.WatchCallback,
-						"",
-						parts[0],
-						w,
-						r,
-					)
-				})
-			} else {
-				resourceHandlersNamespaced[ak.ApiResource.Name] = func(namespace string, name string, w http.ResponseWriter, r *http.Request) {
-					srv.handleResourceFunc(
-						res.CreateNew,
-						res.CreateNewList,
-						res.ListCallback,
-						res.WatchCallback,
-						namespace,
-						name,
-						w,
-						r,
-					)
-				}
+		} else {
+			resourceHandlersNamespaced[ak.ApiResource.Name] = func(namespace string, name string, w http.ResponseWriter, r *http.Request) {
+				srv.handleResourceFunc(
+					ak.Resource.CreateNew,
+					ak.Resource.CreateNewList,
+					ak.Resource.ListCallback,
+					ak.Resource.WatchCallback,
+					namespace,
+					name,
+					w,
+					r,
+				)
 			}
 		}
 
-		for ii := range ak.CustomResources {
-			res := ak.CustomResources[ii]
+		srv.mux.HandleFunc("/apis/"+config.Group+"/"+config.Version+"/"+ak.ApiResource.Name, func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				if strings.EqualFold(r.URL.Query().Get("watch"), "true") && ak.CustomResource.WatchHandler != nil {
+					ak.CustomResource.WatchHandler("", "", w, r)
+				} else if ak.CustomResource.ListHandler != nil {
+					ak.CustomResource.ListHandler("", "", w, r)
+				}
+			default:
+				http.NotFound(w, r)
+			}
+		})
 
-			srv.mux.HandleFunc("/apis/"+config.Group+"/"+config.Version+"/"+ak.ApiResource.Name, func(w http.ResponseWriter, r *http.Request) {
+		if !ak.ApiResource.Namespaced {
+			srv.mux.HandleFunc("/apis/"+config.Group+"/"+config.Version+"/"+ak.ApiResource.Name+"/", func(w http.ResponseWriter, r *http.Request) {
+				parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/apis/"+config.Group+"/"+config.Version+"/"+ak.ApiResource.Name+"/"), "/")
+				if parts[0] == "" {
+					http.NotFound(w, r)
+					return
+				}
+
 				switch r.Method {
 				case http.MethodGet:
-					if strings.EqualFold(r.URL.Query().Get("watch"), "true") && res.WatchHandler != nil {
-						res.WatchHandler("", "", w, r)
-					} else if res.ListHandler != nil {
-						res.ListHandler("", "", w, r)
+					if strings.EqualFold(r.URL.Query().Get("watch"), "true") && ak.CustomResource.WatchHandler != nil {
+						ak.CustomResource.WatchHandler("", parts[0], w, r)
+					} else if ak.CustomResource.ListHandler != nil && parts[0] == "" {
+						ak.CustomResource.ListHandler("", parts[0], w, r)
+					} else if ak.CustomResource.GetHandler != nil {
+						ak.CustomResource.GetHandler("", parts[0], w, r)
+					}
+				case http.MethodPut:
+					if ak.CustomResource.ReplaceHandler != nil {
+						ak.CustomResource.ReplaceHandler("", parts[0], w, r)
+					}
+				case http.MethodDelete:
+					if ak.CustomResource.DeleteHandler != nil {
+						ak.CustomResource.DeleteHandler("", parts[0], w, r)
+					}
+				case http.MethodPost:
+					if ak.CustomResource.CreateHandler != nil {
+						ak.CustomResource.CreateHandler("", "", w, r)
 					}
 				default:
 					http.NotFound(w, r)
 				}
 			})
-
-			if !ak.ApiResource.Namespaced {
-				srv.mux.HandleFunc("/apis/"+config.Group+"/"+config.Version+"/"+ak.ApiResource.Name+"/", func(w http.ResponseWriter, r *http.Request) {
-					parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/apis/"+config.Group+"/"+config.Version+"/"+ak.ApiResource.Name+"/"), "/")
-					if parts[0] == "" {
-						http.NotFound(w, r)
-						return
+		} else {
+			resourceHandlersNamespaced[ak.ApiResource.Name] = func(namespace string, name string, w http.ResponseWriter, r *http.Request) {
+				switch r.Method {
+				case http.MethodGet:
+					if strings.EqualFold(r.URL.Query().Get("watch"), "true") && ak.CustomResource.WatchHandler != nil {
+						ak.CustomResource.WatchHandler(namespace, name, w, r)
+					} else if ak.CustomResource.ListHandler != nil && name == "" {
+						ak.CustomResource.ListHandler(namespace, name, w, r)
+					} else if ak.CustomResource.GetHandler != nil {
+						ak.CustomResource.GetHandler(namespace, name, w, r)
 					}
-
-					switch r.Method {
-					case http.MethodGet:
-						if strings.EqualFold(r.URL.Query().Get("watch"), "true") && res.WatchHandler != nil {
-							res.WatchHandler("", parts[0], w, r)
-						} else if res.ListHandler != nil && parts[0] == "" {
-							res.ListHandler("", parts[0], w, r)
-						} else if res.GetHandler != nil {
-							res.GetHandler("", parts[0], w, r)
-						}
-					case http.MethodPut:
-						if res.ReplaceHandler != nil {
-							res.ReplaceHandler("", parts[0], w, r)
-						}
-					case http.MethodDelete:
-						if res.DeleteHandler != nil {
-							res.DeleteHandler("", parts[0], w, r)
-						}
-					case http.MethodPost:
-						if res.CreateHandler != nil {
-							res.CreateHandler("", "", w, r)
-						}
-					default:
-						http.NotFound(w, r)
+				case http.MethodPut:
+					if ak.CustomResource.ReplaceHandler != nil {
+						ak.CustomResource.ReplaceHandler(namespace, name, w, r)
 					}
-				})
-			} else {
-				resourceHandlersNamespaced[ak.ApiResource.Name] = func(namespace string, name string, w http.ResponseWriter, r *http.Request) {
-					switch r.Method {
-					case http.MethodGet:
-						if strings.EqualFold(r.URL.Query().Get("watch"), "true") && res.WatchHandler != nil {
-							res.WatchHandler(namespace, name, w, r)
-						} else if res.ListHandler != nil && name == "" {
-							res.ListHandler(namespace, name, w, r)
-						} else if res.GetHandler != nil {
-							res.GetHandler(namespace, name, w, r)
-						}
-					case http.MethodPut:
-						if res.ReplaceHandler != nil {
-							res.ReplaceHandler(namespace, name, w, r)
-						}
-					case http.MethodDelete:
-						if res.DeleteHandler != nil {
-							res.DeleteHandler(namespace, name, w, r)
-						}
-					case http.MethodPost:
-						if res.CreateHandler != nil {
-							res.CreateHandler("", "", w, r)
-						}
-					default:
-						http.NotFound(w, r)
+				case http.MethodDelete:
+					if ak.CustomResource.DeleteHandler != nil {
+						ak.CustomResource.DeleteHandler(namespace, name, w, r)
 					}
+				case http.MethodPost:
+					if ak.CustomResource.CreateHandler != nil {
+						ak.CustomResource.CreateHandler("", "", w, r)
+					}
+				default:
+					http.NotFound(w, r)
 				}
 			}
 		}
