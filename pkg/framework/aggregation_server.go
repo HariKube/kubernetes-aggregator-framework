@@ -311,13 +311,19 @@ func (s *Server) Start(ctx context.Context) (err error) {
 		TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12},
 	}
 
+	errChan := make(chan error, 1)
 	go func() {
-		if listenErr := srv.ListenAndServeTLS(s.certFile, s.keyFile); listenErr != nil && !errors.Is(listenErr, http.ErrServerClosed) {
-			err = listenErr
+		if err := srv.ListenAndServeTLS(s.certFile, s.keyFile); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errChan <- err
 		}
+		close(errChan)
 	}()
 
-	<-ctx.Done()
+	select {
+	case err := <-errChan:
+		return err
+	case <-ctx.Done():
+	}
 
 	if err = srv.Shutdown(context.Background()); err != nil {
 		return err
