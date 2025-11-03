@@ -65,26 +65,24 @@ kaf.APIKind {
         Kind:  "ClusterPod",
         Verbs: []string{"get", "list", "watch", "create", "update", "delete"},
     },
-    CustomResources: []kaf.CustomResource{
-        {
-            CreateHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/json; charset=utf-8")
-            },
-            GetHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/json; charset=utf-8")
-            },
-            ListHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/json; charset=utf-8")
-            },
-            ReplaceHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/json; charset=utf-8")
-            },
-            DeleteHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/json; charset=utf-8")
-            },
-            WatchHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/json; charset=utf-8")
-            },
+    CustomResource: kaf.CustomResource{
+        CreateHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+            w.Header().Set("Content-Type", "application/json; charset=utf-8")
+        },
+        GetHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+            w.Header().Set("Content-Type", "application/json; charset=utf-8")
+        },
+        ListHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+            w.Header().Set("Content-Type", "application/json; charset=utf-8")
+        },
+        ReplaceHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+            w.Header().Set("Content-Type", "application/json; charset=utf-8")
+        },
+        DeleteHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+            w.Header().Set("Content-Type", "application/json; charset=utf-8")
+        },
+        WatchHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+            w.Header().Set("Content-Type", "application/json; charset=utf-8")
         },
     },
 },
@@ -95,26 +93,24 @@ kaf.APIKind {
         Kind:       "CustomPod",
         Verbs:      []string{"get", "list", "watch", "create", "update", "delete"},
     },
-    CustomResources: []kaf.CustomResource{
-        {
-            CreateHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/json; charset=utf-8")
-            },
-            GetHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/json; charset=utf-8")
-            },
-            ListHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/json; charset=utf-8")
-            },
-            ReplaceHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/json; charset=utf-8")
-            },
-            DeleteHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/json; charset=utf-8")
-            },
-            WatchHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/json; charset=utf-8")
-            },
+    CustomResource: kaf.CustomResource{
+        CreateHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+            w.Header().Set("Content-Type", "application/json; charset=utf-8")
+        },
+        GetHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+            w.Header().Set("Content-Type", "application/json; charset=utf-8")
+        },
+        ListHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+            w.Header().Set("Content-Type", "application/json; charset=utf-8")
+        },
+        ReplaceHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+            w.Header().Set("Content-Type", "application/json; charset=utf-8")
+        },
+        DeleteHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+            w.Header().Set("Content-Type", "application/json; charset=utf-8")
+        },
+        WatchHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
+            w.Header().Set("Content-Type", "application/json; charset=utf-8")
         },
     },
 },
@@ -177,79 +173,77 @@ Server: *kaf.NewServer(kaf.ServerConfig{
 
 ```golang
 kaf.APIKind {
-  ApiResource: metav1.APIResource{
-    Name:       "combinedpods",
-    Namespaced: true,
-    Kind:       "CombinedPod",
-    Verbs:      []string{"get", "list", "watch"},
-  },
-  Resources: []kaf.Resource{
-    {
-      CreateNew: func() (schema.GroupVersionResource, client.Object) {
-        return corev1.GroupVersion.WithResource("pods"), &corev1.Pod{}
-      },
-      CreateNewList: func() (schema.GroupVersionResource, client.ObjectList) {
-        return corev1.GroupVersion.WithResource("podlist"), &corev1.PodList{}
-      },
-      ListCallback: func(ctx context.Context, namespace, _ string, objList client.ObjectList) (any, error) {
-        podList, ok := objList.(*corev1.PodList)
-        if !ok {
-          return nil, fmt.Errorf("failed to convert podlist for: %s", objList.GetObjectKind().GroupVersionKind().String())
-        }
-
-        // Do what you want
-
-        combinedPods := CombinedPodList{
-          TypeMeta: metav1.TypeMeta{
-            Kind:       "CombinedPodList",
-            APIVersion: Group + "/" + Version,
-          },
-          ListMeta: metav1.ListMeta{
-            ResourceVersion:    podList.ResourceVersion,
-            Continue:           podList.Continue,
-            RemainingItemCount: podList.RemainingItemCount,
-          },
-          Items: []CombinedPod{},
-        }
-
-        for _, t := range items {
-          pod := t.(*corev1.Pod)
-
-          ct := CombinedPod{
-            TypeMeta: metav1.TypeMeta{
-              Kind:       "CombinedPod",
-              APIVersion: Group + "/" + Version,
-            },
-            ObjectMeta: pod.ObjectMeta,
-            Spec:       pod.Spec,
-          }
-
-          combinedPods.Items = append(combinedPods.Items, ct)
-        }
-
-        return combinedPods, nil
-      },
-      WatchCallback: func(ctx context.Context, _, _ string, unstructuredObj *unstructured.Unstructured) (any, error) {
-        pod := corev1.Pod{}
-        if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, &pod); err != nil {
-          return nil, fmt.Errorf("failed to convert unstructured: %v", err)
-        }
-
-        // Do what you want
-
-        cp := CombinedPod{
-          TypeMeta: metav1.TypeMeta{
-            Kind:       "CombinedPod",
-            APIVersion: Group + "/" + Version,
-          },
-          ObjectMeta: pod.ObjectMeta,
-          Spec:       pod.Spec,
-        }
-
-        return cp, nil
-      },
+    ApiResource: metav1.APIResource{
+        Name:       "combinedpods",
+        Namespaced: true,
+        Kind:       "CombinedPod",
+        Verbs:      []string{"get", "list", "watch"},
     },
-  },
+    Resource: kaf.Resource{
+        CreateNew: func() (schema.GroupVersionResource, client.Object) {
+            return corev1.GroupVersion.WithResource("pods"), &corev1.Pod{}
+        },
+        CreateNewList: func() (schema.GroupVersionResource, client.ObjectList) {
+            return corev1.GroupVersion.WithResource("podlist"), &corev1.PodList{}
+        },
+        ListCallback: func(ctx context.Context, namespace, _ string, objList client.ObjectList) (any, error) {
+            podList, ok := objList.(*corev1.PodList)
+            if !ok {
+              return nil, fmt.Errorf("failed to convert podlist for: %s", objList.GetObjectKind().GroupVersionKind().String())
+            }
+
+            // Do what you want
+
+            combinedPods := CombinedPodList{
+              TypeMeta: metav1.TypeMeta{
+                Kind:       "CombinedPodList",
+                APIVersion: Group + "/" + Version,
+              },
+              ListMeta: metav1.ListMeta{
+                ResourceVersion:    podList.ResourceVersion,
+                Continue:           podList.Continue,
+                RemainingItemCount: podList.RemainingItemCount,
+              },
+              Items: []CombinedPod{},
+            }
+
+            for _, t := range items {
+              pod := t.(*corev1.Pod)
+
+              ct := CombinedPod{
+                TypeMeta: metav1.TypeMeta{
+                  Kind:       "CombinedPod",
+                  APIVersion: Group + "/" + Version,
+                },
+                ObjectMeta: pod.ObjectMeta,
+                Spec:       pod.Spec,
+              }
+
+              combinedPods.Items = append(combinedPods.Items, ct)
+            }
+
+            return combinedPods, nil
+          },
+          WatchCallback: func(ctx context.Context, _, _ string, unstructuredObj *unstructured.Unstructured) (any, error) {
+            pod := corev1.Pod{}
+            if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, &pod); err != nil {
+              return nil, fmt.Errorf("failed to convert unstructured: %v", err)
+            }
+
+            // Do what you want
+
+            cp := CombinedPod{
+              TypeMeta: metav1.TypeMeta{
+                Kind:       "CombinedPod",
+                APIVersion: Group + "/" + Version,
+              },
+              ObjectMeta: pod.ObjectMeta,
+              Spec:       pod.Spec,
+            }
+
+            return cp, nil
+          },
+      },
 },
 ```
 
