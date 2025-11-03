@@ -1,4 +1,4 @@
-module github.com/mhmxs/kubernetes-aggregator-framework
+module github.com/HariKube/kubernetes-aggregator-framework
 
 go 1.24.4
 
