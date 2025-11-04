@@ -65,7 +65,7 @@ kaf.APIKind {
         Kind:  "ClusterPod",
         Verbs: []string{"get", "list", "watch", "create", "update", "delete"},
     },
-    CustomResource: kaf.CustomResource{
+    CustomResource: &kaf.CustomResource{
         CreateHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
             w.Header().Set("Content-Type", "application/json; charset=utf-8")
         },
@@ -93,7 +93,7 @@ kaf.APIKind {
         Kind:       "CustomPod",
         Verbs:      []string{"get", "list", "watch", "create", "update", "delete"},
     },
-    CustomResource: kaf.CustomResource{
+    CustomResource: &kaf.CustomResource{
         CreateHandler: func(namespace, name string, w http.ResponseWriter, r *http.Request) {
             w.Header().Set("Content-Type", "application/json; charset=utf-8")
         },
@@ -179,7 +179,7 @@ kaf.APIKind {
         Kind:       "CombinedPod",
         Verbs:      []string{"get", "list", "watch"},
     },
-    Resource: kaf.Resource{
+    Resource: &kaf.Resource{
         CreateNew: func() (schema.GroupVersionResource, client.Object) {
             return corev1.GroupVersion.WithResource("pods"), &corev1.Pod{}
         },
