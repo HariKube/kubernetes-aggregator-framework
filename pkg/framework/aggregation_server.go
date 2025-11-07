@@ -93,11 +93,15 @@ func NewServer(config ServerConfig) *Server {
 
 	srv.mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		if _, err := w.Write([]byte("ok")); err != nil {
+			return
+		}
 	})
 	srv.mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ready"))
+		if _, err := w.Write([]byte("ready")); err != nil {
+			return
+		}
 	})
 
 	srv.mux.HandleFunc("/apis", func(w http.ResponseWriter, r *http.Request) {
@@ -506,7 +510,10 @@ func (s *Server) handleResourceFunc(
 		}
 
 		items.SetResourceVersion(item.GetResourceVersion())
-		meta.SetList(items, []runtime.Object{item})
+		if err := meta.SetList(items, []runtime.Object{item}); err != nil {
+			http.Error(w, "failed to set list item: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	} else {
 		var limit int64 = 500
 		if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
